@@ -170,7 +170,7 @@ elasticsearch-7.10.0/bin/elasticsearch -d
 
 信息查询 (RESTful API):
 
-```json
+```
 # 集群信息
 GET /
 curl 192.168.20.103:9200
@@ -205,7 +205,7 @@ PS: 数据量大的索引最好按天新建. 不要用数据量非常大的索�
 
 主分片与副本分片会分布在不同节点, `7.0` 后默认主分片为 `1`, 副本分片为 `0`
 
-```http
+```
 PUT /test001
 {
    "settings" : {
@@ -231,7 +231,7 @@ PUT /test001
 
 PS: 增加节点并增加副本分片,  吞吐量更大, 搜索性能更高.
 
-```json
+```
 GET xy_auth_monitor_report_201125/_search
 {
   "explain": true,
@@ -249,14 +249,14 @@ GET xy_auth_monitor_report_201125/_search
 
 Ref: https://www.bilibili.com/video/BV1TJ411D7ya
 
-```http
+```
 PUT /test001/_settings
 {
    "number_of_replicas" : 2
 }
 ```
 
-```http
+```
 GET /test001
 ```
 
@@ -290,13 +290,70 @@ GET /test001
 
 Ref: https://www.cnblogs.com/Neeo/articles/10897280.html
 
+##### 1.2.1 索引模板
+
+```
+PUT /_template/base_settings
+{
+  "index_patterns": ["*"],
+  "order": 0,
+  "settings": {
+    "number_of_shards": 3,
+    "number_of_replicas": 1
+  }
+}
+```
+
+```
+PUT /_template/base_mapping
+{
+  "index_patterns": [
+    "*_20*"
+  ],
+  "order": 1,
+  "mappings": {
+    "_doc": {
+      "properties": {
+        "_cip": {
+          "type": "ip"
+        },
+        "_ctime": {
+          "type": "date"
+        },
+        "_gtime": {
+          "type": "date"
+        },
+        "timestamp": {
+          "type": "date"
+        }
+      }
+    }
+  },
+  "aliases": {
+    "{index}_as": {}
+  }
+}
+```
+
+```
+PUT /test_201201/_doc/1
+{
+  "_cip":"1.1.1.2",
+  "timestamp":1606335251589
+}
+```
+
+##### 1.2.2 Rollover Index
+
+Ref: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/indices-rollover-index.html
+
 #### 1.3 映射(Mapping)
 
-```http
+```
 GET /test001/_mapping
 ```
 
-```json
+```
 PUT /test001
 {
   "settings": {
@@ -339,7 +396,7 @@ PUT /test001
 
 ##### 1.3.1 举例 IP:
 
-```json
+```
 PUT /test001/test001/1
 {
   "game_id": 123,
@@ -350,7 +407,7 @@ PUT /test001/test001/1
 }
 ```
 
-```json
+```
 GET /test001/_search
 {
   "query": {
@@ -382,21 +439,21 @@ PS: `192.168.1.100`, `0.0.0.0/0`, `192.168.1.123/16`, `192.168.1.0/26`
 }
 ```
 
-```json
+```
 POST /test001/test001
 {
   "end_time": 1606361965000
 }
 ```
 
-```json
+```
 POST /test001/test001
 {
   "end_time": "2020-11-26"
 }
 ```
 
-```json
+```
 GET /test001/_search
 {
   "query": {
@@ -414,7 +471,7 @@ GET /test001/_search
 
 ##### 1.4.1 测试分析器
 
-```json
+```
 POST _analyze
 {
   "tokenizer": "standard",
@@ -425,7 +482,7 @@ POST _analyze
 
 标准分词, 转为小写, 转为等效 ASCII 字符, 得到 4 个词: `is`, `this`, `deja`, `vu`
 
-```json
+```
 POST _analyze
 {
   "analyzer": "simple",
@@ -435,7 +492,7 @@ POST _analyze
 
 简单分析器无配置, 标准分词后转小写. 常用还有: `whitespace`, `stop`, `pattern`
 
-```json
+```
 PUT /test003
 {
   "settings": {
@@ -452,7 +509,7 @@ PUT /test003
 }
 ```
 
-```json
+```
 POST /test003/_analyze
 {
   "analyzer": "my_email_analyzer",
@@ -483,7 +540,7 @@ POST /test003/_analyze
 
 ##### 1.4.2 自定义分析器
 
-```json
+```
 PUT /test002
 {
   "settings": {
@@ -536,7 +593,7 @@ PUT /test002
 
 标准分词结果:
 
-```json
+```
 POST _analyze
 {
   "analyzer": "standard",
@@ -567,7 +624,7 @@ POST _analyze
 
 使用自定义分析结果:
 
-```json
+```
 GET /test002/_analyze
 {
   "analyzer": "my_analyzer",
@@ -600,11 +657,11 @@ PS: 中文分词需要安装扩展: `medcl/elasticsearch-analysis-ik`
 
 ### 2. 删除索引
 
-```http
+```
 DELETE /test001,test002
 ```
 
-```http
+```
 DELETE /test00*
 ```
 
@@ -634,7 +691,7 @@ curl -XDELETE 'http://192.168.20.103:9200/test00*'
 - 文档字段名可以是任何合法字符串, **不能包含英文句号(.)**
 - 可以指定文档 `_id`, 也可以自动生成
 
-```json
+```
 PUT /test004/test004/1?timeout=5m
 {
   "user": "ff",
@@ -643,7 +700,7 @@ PUT /test004/test004/1?timeout=5m
 }
 ```
 
-```json
+```
 POST /test004/test004
 {
   "uid": 123,
@@ -668,7 +725,7 @@ action_and_meta_data\n
 optional_source\n
 ```
 
-```json
+```
 POST _bulk
 {"index":{"_index":"test001","_type":"test001","_id":"1"}}
 {"user_name":"fufu","game_id":111}
@@ -747,13 +804,13 @@ POST _bulk
 
 #### 4.1 按 `_id` 删除
 
-```http
+```
 DELETE /test004/test004/1
 ```
 
 #### 4.2 筛选后删除
 
-```http
+```
 POST test004/_delete_by_query
 {
   "query": {
@@ -770,11 +827,11 @@ POST test004/_delete_by_query
 
 #### 1.1 单 ID 查询
 
-```http
+```
 GET /test004/test004/1
 ```
 
-```http
+```
 GET /test004/test004/1?_source=user,*_date
 ```
 
@@ -796,7 +853,7 @@ Ref: https://www.elastic.co/guide/en/elasticsearch/reference/6.4/search-uri-requ
 
 #### 1.2 多 ID 查询
 
-```json
+```
 GET /_mget
 {
   "docs": [
@@ -818,11 +875,11 @@ GET /_mget
 
 #### 2.1 空条件查询
 
-```http
+```
 GET /test004/_search
 ```
 
-```json
+```
 GET /test004/_search
 {
   "query": {
@@ -837,7 +894,7 @@ GET /test004/_search
 - 文件模板
 - 预定义模板
 
-```json
+```
 POST _scripts/test_tpl001
 {
   "script": {
@@ -855,13 +912,13 @@ POST _scripts/test_tpl001
 
 查看模板:
 
-```http
+```
 GET _scripts/test_tpl001
 ```
 
 使用模板查询:
 
-```json
+```
 GET /test004/_search/template
 {
   "id": "test_tpl001",
@@ -873,7 +930,7 @@ GET /test004/_search/template
 
 删除模板:
 
-```http
+```
 DELETE _scripts/test_tpl001
 ```
 
@@ -881,11 +938,11 @@ DELETE _scripts/test_tpl001
 
 #### 2.3 条件查询
 
-```http
+```
 GET /test004/_search?q=uid:123
 ```
 
-```json
+```
 GET /test004/_search
 {
   "query": {
@@ -896,7 +953,7 @@ GET /test004/_search
 }
 ```
 
-```json
+```
 GET /test004/_search
 {
   "query": {
@@ -938,7 +995,7 @@ SELECT *
 
 转为 DSL 语句:
 
-```json
+```
 GET /test001/_search
 {
   "query": {
@@ -958,7 +1015,7 @@ GET /test001/_search
 
 #### 2.5 查询与过滤
 
-```json
+```
 GET _search
 {
   "query": { 
@@ -1019,7 +1076,7 @@ GET _search
 
 `_source`, `stored_fields`, `script_fields` 结果字段
 
-```json
+```
 GET /test001/_search
 {
   "query": {
@@ -1082,7 +1139,7 @@ GET /test001/_search
 
 `highlight` 高亮
 
-```json
+```
 GET /test004/_search
 {
     "query" : {
@@ -1108,7 +1165,7 @@ GET /test004/_search
 
 ![image-20201127095354120](Elasticsearch-Quick-Start-Guide.assets/image-20201127095354120.png)
 
-```json
+```
 GET bw_collect_201126/_search
 {
   "query": {
@@ -1146,7 +1203,7 @@ GET bw_collect_201126/_search
 
 SQL 方式查询:
 
-```json
+```
 POST /_xpack/sql?format=txt
 {
   "query":"SELECT client_ip, kbps_in, kbps_out, time FROM bw_collect_201126 WHERE time >= '2020-11-26T18:00:00.000+08:00' and time < '2020-11-26T20:00:00.000+08:00' and interface.keyword='10GE1/0/111' ORDER BY time ASC"
@@ -1155,7 +1212,7 @@ POST /_xpack/sql?format=txt
 
 如果中欧带宽有多个接口呢?
 
-```json
+```
 POST /_xpack/sql?format=txt
 {
   "query":"SELECT kbps_in, kbps_out, time, interface FROM bw_collect_201126 WHERE time >= '2020-11-26T18:00:00.000+08:00' and time < '2020-11-26T20:00:00.000+08:00' and (interface.keyword='10GE1/0/111' or interface.keyword='Vlanif1777') ORDER BY time ASC"
@@ -1164,12 +1221,12 @@ POST /_xpack/sql?format=txt
 
 SQL 转为 DSL 结构化查询:
 
-```http
+```
 POST /_xpack/sql/translate
 {...}
 ```
 
-```json
+```
 GET bw_collect_201126/_search
 {
   "query": {
@@ -1226,7 +1283,7 @@ GET bw_collect_201126/_search
 
 ![image-20201127213357291](Elasticsearch-Quick-Start-Guide.assets/image-20201127213357291.png)
 
-```json
+```
 GET /monitor_alarm_info_201127/_search
 {
   "query": {
@@ -1256,7 +1313,7 @@ GET /monitor_alarm_info_201127/_search
 
 ![image-20201126092523128](Elasticsearch-Quick-Start-Guide.assets/image-20201126092523128.png)
 
-```json
+```
 GET /tcpproxy_201125/_search
 {
   "query": {
@@ -1284,7 +1341,7 @@ GET /tcpproxy_201125/_search
 
 ### 4. 排序
 
-```json
+```
 GET xy_201125,xy_201126/_search
 {
   "query": {
@@ -1350,7 +1407,7 @@ PS: 数组中数据类型必须一致. `[1, 2, 3]` 查看 `mapping`:
 
 思路: 交换机接口 `10GE1/0/111` 的流入流出带宽最大值 `max`, `stats`
 
-```json
+```
 GET bw_collect_201126/_search
 {
   "size": 0,
@@ -1379,7 +1436,7 @@ GET bw_collect_201126/_search
 
 也可以按峰值排序取前 5 条数据:
 
-```json
+```
 GET bw_collect_201126/_search
 {
   "size": 5,
@@ -1420,7 +1477,7 @@ GET bw_collect_201126/_search
 
 `terms`, `cardinality`
 
-```json
+```
 GET userspd_201126/_search
 {
   "size": 0,
@@ -1488,7 +1545,7 @@ GET userspd_201126/_search
 
 ![image-20201127094612408](Elasticsearch-Quick-Start-Guide.assets/image-20201127094612408.png)
 
-```json
+```
 GET xy_201127/_search
 {
   "size": 0,
@@ -1571,7 +1628,7 @@ GET xy_201127/_search
 
 `date_histogram`, 按时间间隔聚合, 日期直方图
 
-```json
+```
 GET tcpproxy_201127/_search
 {
   "query": {
@@ -1632,7 +1689,7 @@ GET tcpproxy_201127/_search
 
 ![image-20201127220630430](Elasticsearch-Quick-Start-Guide.assets/image-20201127220630430.png)
 
-```json
+```
 GET tcpproxy_201127/_search
 {
   "query": {
@@ -1717,7 +1774,7 @@ GET tcpproxy_201127/_search
 
 `terms`, `top_hits`
 
-```json
+```
 GET dns_monitor_201126/_search
 {
   "size": 0,
@@ -1826,7 +1883,7 @@ GET dns_monitor_201126/_search
 
 ![image-20201127213606353](Elasticsearch-Quick-Start-Guide.assets/image-20201127213606353.png)
 
-```json
+```
 GET /monitor_alarm_info_201127/_search
 {
   "size": 0,
@@ -1872,7 +1929,7 @@ GET /monitor_alarm_info_201127/_search
 - `combine_script`  文档收集完成后, 每个分片执行一次, 必须
 - `reduce_script` 所有分片均返回结果后, 在协调节点上执行一次, 必须
 
-```json
+```
 GET userspd_201127/_search
 {
   "size": 0,
@@ -1981,7 +2038,7 @@ GET userspd_201127/_search
 
 `script`, `stats`, v6.5 支持 `median_absolute_deviation`
 
-```json
+```
 GET xy_201125/_search
 {
   "size": 0,
